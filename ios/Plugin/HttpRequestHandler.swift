@@ -116,7 +116,13 @@ class HttpRequestHandler {
         } else if (responseType == .arrayBuffer || responseType == .blob) {
             output["data"] = data.base64EncodedString();
         } else if (responseType == .document || responseType == .text || responseType == .default) {
-            output["data"] = String(data: data, encoding: .utf8)
+            var data = Data(data) // might have malformed UTF-8 in the body of the response
+            data.append(0)
+            let s = data.withUnsafeBytes { p in
+                String(cString: p.bindMemory(to: CChar.self).baseAddress!)
+            }
+            let clean = s.replacingOccurrences(of: "\u{FFFD}", with: "")
+            output["data"] = clean
         }
 
         return output
